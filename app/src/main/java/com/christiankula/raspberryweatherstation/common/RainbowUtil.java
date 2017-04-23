@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.christitiankula.raspberryweatherstation.common;
+package com.christiankula.raspberryweatherstation.common;
 
 import android.graphics.Color;
 

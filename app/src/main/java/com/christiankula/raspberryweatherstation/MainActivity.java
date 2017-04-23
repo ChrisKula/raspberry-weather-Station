@@ -1,14 +1,13 @@
-package com.christitiankula.raspberryweatherstation;
+package com.christiankula.raspberryweatherstation;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
-import com.christitiankula.raspberryweatherstation.service.WeatherStationService;
+import com.christiankula.raspberryweatherstation.weatherstation.WeatherStationService;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -1,4 +1,4 @@
-package com.christitiankula.raspberryweatherstation.service;
+package com.christiankula.raspberryweatherstation.weatherstation;
 
 import android.app.Service;
 import android.content.Intent;
@@ -23,7 +23,7 @@ public class WeatherStationService extends Service {
 
     private AlphanumericDisplay alphanumericDisplay;
 
-    private Handler updateTimeHanlder;
+    private Handler updateTimeHandler;
     private Runnable updateTimeRunnable;
 
     @Nullable
@@ -47,20 +47,24 @@ public class WeatherStationService extends Service {
             throw new RuntimeException(e);
         }
 
-        updateTimeHanlder = new Handler();
+        updateTimeHandler = new Handler();
         updateTimeRunnable = new UpdateTimeRunnable();
+
+        Log.d(TAG, "WeatherStationService created");
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        updateTimeHanlder.post(updateTimeRunnable);
+        Log.d(TAG, "WeatherStationService started");
+
+        updateTimeHandler.post(updateTimeRunnable);
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        updateTimeHanlder.removeCallbacks(updateTimeRunnable);
+        updateTimeHandler.removeCallbacks(updateTimeRunnable);
         try {
             alphanumericDisplay.clear();
             alphanumericDisplay.close();
@@ -85,7 +89,7 @@ public class WeatherStationService extends Service {
 
                 try {
                     alphanumericDisplay.display(h + min);
-                    updateTimeHanlder.postDelayed(this, TimeUnit.SECONDS.toMillis(1));
+                    updateTimeHandler.postDelayed(this, TimeUnit.SECONDS.toMillis(1));
                 } catch (IOException e) {
                     Log.e(TAG, "Error while displaying hour on alphanumeric display", e);
                 }
