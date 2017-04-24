@@ -24,7 +24,7 @@ public class WeatherStationService extends Service {
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "WeatherStationService created");
-        weatherStation = WeatherStation.getInstance();
+        weatherStation = WeatherStation.getInstance(getBaseContext());
     }
 
     @Override
