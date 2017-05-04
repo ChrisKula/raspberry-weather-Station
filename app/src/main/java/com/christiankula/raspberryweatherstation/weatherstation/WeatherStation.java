@@ -76,7 +76,8 @@ public class WeatherStation {
             ledStrip = RainbowHat.openLedStrip();
             ledStrip.setBrightness(LED_STRIP_BRIGHTNESS);
         } catch (IOException e) {
-            Log.d(TAG, "Error while opening LED strip", e);
+            Log.e(TAG, "Error while opening LED strip", e);
+            throw new RuntimeException(e);
         }
 
         try {
@@ -90,7 +91,8 @@ public class WeatherStation {
 
             state = WeatherStationState.TIME;
         } catch (IOException e) {
-            Log.d(TAG, "Error while opening LEDs");
+            Log.e(TAG, "Error while opening LEDs", e);
+            throw new RuntimeException(e);
         }
 
         try {
@@ -152,7 +154,7 @@ public class WeatherStation {
                 alphanumericDisplay.display((int) temperature + " C");
                 ledStrip.write(LedStripUtils.getTemperatureColors(temperature));
             } catch (IOException e) {
-                Log.e(TAG, "Error displaying temperature", e);
+                Log.e(TAG, "Error while displaying temperature", e);
             }
         }
     }
@@ -163,7 +165,7 @@ public class WeatherStation {
                 alphanumericDisplay.display(pressure);
                 ledStrip.write(LedStripUtils.getPressureStripColors(pressure));
             } catch (IOException e) {
-                e.printStackTrace();
+                Log.e(TAG, "Error while display pressure", e);
             }
         }
     }
@@ -235,7 +237,7 @@ public class WeatherStation {
 
                     state = WeatherStationState.TIME;
                 } catch (IOException e) {
-                    Log.d(TAG, "Error while turning on red LED (Time)");
+                    Log.e(TAG, "Error while turning on red LED (Time)");
                 }
             }
         }
@@ -255,7 +257,7 @@ public class WeatherStation {
 
                     state = WeatherStationState.TEMPERATURE;
                 } catch (IOException e) {
-                    Log.d(TAG, "Error while turning on green LED (Temperature)");
+                    Log.e(TAG, "Error while turning on green LED (Temperature)");
                 }
             }
         }
@@ -275,7 +277,7 @@ public class WeatherStation {
 
                     state = WeatherStationState.PRESSURE;
                 } catch (IOException e) {
-                    Log.d(TAG, "Error while turning on blue LED (Pressure)");
+                    Log.e(TAG, "Error while turning on blue LED (Pressure)");
                 }
             }
         }
