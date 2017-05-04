@@ -22,6 +22,8 @@ import android.graphics.Color;
 
 import com.google.android.things.contrib.driver.rainbowhat.RainbowHat;
 
+// TODO: Add documentation for methods
+
 /**
  * Helper methods for computing outputs on the Rainbow HAT
  */
@@ -30,19 +32,23 @@ public final class LedStripUtils {
     private static final float BAROMETER_RANGE_LOW = 965.f;
     private static final float BAROMETER_RANGE_HIGH = 1035.f;
 
+    private static final int WATCH_COLOR = Color.parseColor("#FF9800");
+    private static final int SECONDS_HAND_COLOR = Color.GREEN;
+
     private static final int LOW_TEMPERATURE_COLOR = Color.GREEN;
     private static final int MEDIUM_TEMPERATURE_COLOR = Color.YELLOW;
     private static final int HIGH_TEMPERATURE_COLOR = Color.RED;
 
     /* LED Strip Color Constants*/
-    private static final int[] sRainbowColors;
+    private static final int[] sTimeColors;
     private static final int[] sTemperatureGaugeColors;
+    private static final int[] sRainbowColors;
 
     static {
-        sRainbowColors = new int[LEDSTRIP_LENGTH];
-        for (int i = 0; i < sRainbowColors.length; i++) {
-            float[] hsv = {i * 360.f / sRainbowColors.length, 1.0f, 1.0f};
-            sRainbowColors[i] = Color.HSVToColor(255, hsv);
+        sTimeColors = new int[LEDSTRIP_LENGTH];
+
+        for (int i = 0; i < sTimeColors.length; i++) {
+            sTimeColors[i] = WATCH_COLOR;
         }
     }
 
@@ -56,6 +62,14 @@ public final class LedStripUtils {
                 LOW_TEMPERATURE_COLOR,
                 LOW_TEMPERATURE_COLOR
         };
+    }
+
+    static {
+        sRainbowColors = new int[LEDSTRIP_LENGTH];
+        for (int i = 0; i < sRainbowColors.length; i++) {
+            float[] hsv = {i * 360.f / sRainbowColors.length, 1.0f, 1.0f};
+            sRainbowColors[i] = Color.HSVToColor(255, hsv);
+        }
     }
 
     private LedStripUtils() {
@@ -83,14 +97,23 @@ public final class LedStripUtils {
     }
 
     public static int[] getTemperatureColors(float temperature) {
-        int n = Math.round(temperature / 10);
+        int n = Math.round(temperature / 7);
         n = Math.max(0, Math.min(n, sTemperatureGaugeColors.length));
 
-        int[] colors = new int[RainbowHat.LEDSTRIP_LENGTH];
+        int[] colors = new int[LEDSTRIP_LENGTH];
         for (int i = 0; i < n; i++) {
             int ri = sTemperatureGaugeColors.length - 1 - i;
             colors[ri] = sTemperatureGaugeColors[ri];
         }
+
+        return colors;
+    }
+
+    public static int[] getTimeColors(int secondOfMinute) {
+        int[] colors = sTimeColors.clone();
+
+        int i = -1 * (secondOfMinute % RainbowHat.LEDSTRIP_LENGTH) + 6;
+        colors[i] = SECONDS_HAND_COLOR;
 
         return colors;
     }

@@ -210,11 +210,16 @@ public class WeatherStation {
                 int hours = lt.getHourOfDay() + 2;
                 hours = hours >= 24 ? hours - 24 : hours;
 
+                int min = lt.getMinuteOfHour();
+
                 String h = hours >= 10 ? "" + hours : "0" + hours;
-                String min = lt.getMinuteOfHour() > 9 ? "" + lt.getMinuteOfHour() : "0" + lt.getMinuteOfHour();
+                String m = min > 9 ? "" + min : "0" + min;
+
+                String time = lt.getSecondOfMinute() % 2 == 0 ? h + m : h + "." + m;
 
                 try {
-                    alphanumericDisplay.display(h + min);
+                    alphanumericDisplay.display(time);
+                    ledStrip.write(LedStripUtils.getTimeColors(lt.getSecondOfMinute()));
                 } catch (IOException e) {
                     Log.e(TAG, "Error while displaying hour on alphanumeric display", e);
                 }
