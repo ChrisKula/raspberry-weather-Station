@@ -117,4 +117,13 @@ public final class LedStripUtils {
 
         return colors;
     }
+
+    public static int[] getTurnedOffColors() {
+        int[] colors = new int[RainbowHat.LEDSTRIP_LENGTH];
+        for (int i = 0; i < colors.length; i++) {
+            colors[i] = Color.BLACK;
+        }
+
+        return colors;
+    }
 }
