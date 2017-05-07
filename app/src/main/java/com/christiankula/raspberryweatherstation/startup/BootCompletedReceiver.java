@@ -1,9 +1,11 @@
-package com.christiankula.raspberryweatherstation.weatherstation;
+package com.christiankula.raspberryweatherstation.startup;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
+
+import com.christiankula.raspberryweatherstation.weatherstation.WeatherStationService;
 
 
 public class BootCompletedReceiver extends BroadcastReceiver {
