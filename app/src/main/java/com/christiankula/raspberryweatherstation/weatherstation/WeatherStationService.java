@@ -13,7 +13,6 @@ public class WeatherStationService extends Service {
 
     private WeatherStation weatherStation;
 
-
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -30,7 +29,7 @@ public class WeatherStationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "WeatherStationService started");
-        weatherStation.startClock();
+        weatherStation.start();
         return START_STICKY;
     }
 

@@ -22,35 +22,37 @@ import com.google.android.things.pio.Gpio;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 public class WeatherStation {
     private static final String TAG = WeatherStation.class.getSimpleName();
 
-    private static final int LED_STRIP_BRIGHTNESS = 1;
-
-
     private static WeatherStation instance;
 
-    private AlphanumericDisplay alphanumericDisplay;
-    private Bmx280SensorDriver environmentSensor;
-    private Apa102 ledStrip;
+    private static final int LED_STRIP_BRIGHTNESS = 1;
 
-    private Button timeButton;
-    private Button temperatureButton;
-    private Button pressureButton;
+    private static final int DEFAULT_REFRESH_RATE_MS = 200;
 
-    private Gpio redLed;
-    private Gpio greenLed;
-    private Gpio blueLed;
+    private final AlphanumericDisplay alphanumericDisplay;
+    private final Bmx280SensorDriver environmentSensor;
+    private final Apa102 ledStrip;
 
-    private Handler updateTimeHandler;
-    private Runnable updateTimeRunnable;
-    private SensorEventListener sensorEventListener;
+    private final Button timeButtonA;
+    private final Button temperatureButtonB;
+    private final Button pressureButtonC;
 
-    private SensorManager sensorManager;
+    private final Gpio timeRedLed;
+    private final Gpio temperatureGreenLed;
+    private final Gpio pressureBlueLed;
 
-    private WeatherStationState state;
+    private final SensorManager sensorManager;
+    private final Sensor temperatureSensor;
+    private final Sensor pressureSensor;
+
+    private final Handler updateTimeHandler;
+    private final Runnable updateTimeRunnable;
+    private final SensorEventListener sensorEventListener;
+
+    private WeatherStationState currentState;
 
     private WeatherStation(Context context) {
         try {
@@ -81,39 +83,39 @@ public class WeatherStation {
         }
 
         try {
-            redLed = RainbowHat.openLed(RainbowHat.LED_RED);
-            greenLed = RainbowHat.openLed(RainbowHat.LED_GREEN);
-            blueLed = RainbowHat.openLed(RainbowHat.LED_BLUE);
+            timeRedLed = RainbowHat.openLed(RainbowHat.LED_RED);
+            temperatureGreenLed = RainbowHat.openLed(RainbowHat.LED_GREEN);
+            pressureBlueLed = RainbowHat.openLed(RainbowHat.LED_BLUE);
 
-            redLed.setValue(true);
-            greenLed.setValue(false);
-            blueLed.setValue(false);
+            timeRedLed.setValue(true);
+            temperatureGreenLed.setValue(false);
+            pressureBlueLed.setValue(false);
 
-            state = WeatherStationState.TIME;
+            currentState = WeatherStationState.TIME;
         } catch (IOException e) {
             Log.e(TAG, "Error while opening LEDs", e);
             throw new RuntimeException(e);
         }
 
         try {
-            timeButton = new Button(RainbowHat.BUTTON_A, Button.LogicState.PRESSED_WHEN_LOW);
-            timeButton.setOnButtonEventListener(new TimeButtonListener());
+            timeButtonA = new Button(RainbowHat.BUTTON_A, Button.LogicState.PRESSED_WHEN_LOW);
+            timeButtonA.setOnButtonEventListener(new TimeButtonListener());
         } catch (IOException e) {
             Log.e(TAG, "Error while initializing Button A", e);
             throw new RuntimeException(e);
         }
 
         try {
-            temperatureButton = new Button(RainbowHat.BUTTON_B, Button.LogicState.PRESSED_WHEN_LOW);
-            temperatureButton.setOnButtonEventListener(new TemperatureButtonListener());
+            temperatureButtonB = new Button(RainbowHat.BUTTON_B, Button.LogicState.PRESSED_WHEN_LOW);
+            temperatureButtonB.setOnButtonEventListener(new TemperatureButtonListener());
         } catch (IOException e) {
             Log.e(TAG, "Error while initializing Button B", e);
             throw new RuntimeException(e);
         }
 
         try {
-            pressureButton = new Button(RainbowHat.BUTTON_C, Button.LogicState.PRESSED_WHEN_LOW);
-            pressureButton.setOnButtonEventListener(new PressureButtonListener());
+            pressureButtonC = new Button(RainbowHat.BUTTON_C, Button.LogicState.PRESSED_WHEN_LOW);
+            pressureButtonC.setOnButtonEventListener(new PressureButtonListener());
         } catch (IOException e) {
             Log.e(TAG, "Error while initializing Button B", e);
             throw new RuntimeException(e);
@@ -124,12 +126,8 @@ public class WeatherStation {
         sensorEventListener = new TemperaturePressureSensorEventListener();
 
         sensorManager = (SensorManager) context.getSystemService(SENSOR_SERVICE);
-
-        Sensor temperatureSensor = sensorManager.getDynamicSensorList(Sensor.TYPE_AMBIENT_TEMPERATURE).get(0);
-        sensorManager.registerListener(sensorEventListener, temperatureSensor, SensorManager.SENSOR_DELAY_NORMAL);
-
-        Sensor pressureSensor = sensorManager.getDynamicSensorList(Sensor.TYPE_PRESSURE).get(0);
-        sensorManager.registerListener(sensorEventListener, pressureSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        temperatureSensor = sensorManager.getDynamicSensorList(Sensor.TYPE_AMBIENT_TEMPERATURE).get(0);
+        pressureSensor = sensorManager.getDynamicSensorList(Sensor.TYPE_PRESSURE).get(0);
     }
 
     public static WeatherStation getInstance(Context context) {
@@ -140,16 +138,96 @@ public class WeatherStation {
         return instance;
     }
 
-    public void startClock() {
+    public void start() {
+        if (currentState == WeatherStationState.CLOSED) {
+            throw new NullPointerException("Can't start the WeatherStation because instance was previously closed. "
+                    + "Open it again with 'getInstance()'");
+        }
+
+        startClock();
+        startTemperatureListening();
+        startPressureListening();
+
+        Log.d(TAG, "WeatherStation started");
+    }
+
+    public void stop() {
+        if (currentState == WeatherStationState.CLOSED) {
+            throw new NullPointerException("Can't stop the WeatherStation because instance is already closed. "
+                    + "Open it again with 'getInstance()'");
+        }
+
+        stopClock();
+        stopTemperatureListening();
+        stopPressureListening();
+
+        Log.d(TAG, "WeatherStation stopped");
+    }
+
+    public void close() {
+        stop();
+
+        try {
+            clearAllPeripherals();
+            alphanumericDisplay.close();
+
+            environmentSensor.close();
+
+            ledStrip.close();
+
+            timeRedLed.close();
+            temperatureGreenLed.close();
+            pressureBlueLed.close();
+
+            timeButtonA.close();
+            temperatureButtonB.close();
+            pressureButtonC.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Error while clearing and closing all peripherals", e);
+        }
+
+        instance = null;
+        currentState = WeatherStationState.CLOSED;
+
+        Log.d(TAG, "WeatherStation closed");
+    }
+
+    public void clearAllPeripherals() throws IOException {
+        alphanumericDisplay.clear();
+
+        ledStrip.write(LedStripUtils.getTurnedOffColors());
+
+        timeRedLed.setValue(false);
+        temperatureGreenLed.setValue(false);
+        pressureBlueLed.setValue(false);
+    }
+
+    private void startClock() {
         updateTimeHandler.post(updateTimeRunnable);
     }
 
-    public void stopClock() {
+    private void stopClock() {
         updateTimeHandler.removeCallbacks(updateTimeRunnable);
     }
 
+    private boolean startTemperatureListening() {
+        return sensorManager.registerListener(sensorEventListener, temperatureSensor, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    private void stopTemperatureListening() {
+        sensorManager.unregisterListener(sensorEventListener, temperatureSensor);
+    }
+
+    private boolean startPressureListening() {
+        return sensorManager.registerListener(sensorEventListener, pressureSensor, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    private void stopPressureListening() {
+        sensorManager.unregisterListener(sensorEventListener, pressureSensor);
+    }
+
     private void updateTemperatureDisplay(float temperature) {
-        if (alphanumericDisplay != null && state == WeatherStationState.TEMPERATURE) {
+        if (alphanumericDisplay != null && currentState == WeatherStationState.TEMPERATURE) {
             try {
                 alphanumericDisplay.display((int) temperature + " C");
                 ledStrip.write(LedStripUtils.getTemperatureColors(temperature));
@@ -160,7 +238,7 @@ public class WeatherStation {
     }
 
     private void updateBarometerDisplay(float pressure) {
-        if (alphanumericDisplay != null && state == WeatherStationState.PRESSURE) {
+        if (alphanumericDisplay != null && currentState == WeatherStationState.PRESSURE) {
             try {
                 alphanumericDisplay.display(pressure);
                 ledStrip.write(LedStripUtils.getPressureStripColors(pressure));
@@ -170,41 +248,18 @@ public class WeatherStation {
         }
     }
 
-    public void close() {
-        stopClock();
-        sensorManager.unregisterListener(sensorEventListener);
-
-        try {
-            alphanumericDisplay.clear();
-            alphanumericDisplay.close();
-
-            environmentSensor.close();
-
-            ledStrip.close();
-
-            redLed.close();
-            greenLed.close();
-            blueLed.close();
-
-            timeButton.close();
-            temperatureButton.close();
-            pressureButton.close();
-        } catch (IOException e) {
-            Log.e(TAG, "Error while clearing and closing all peripherals", e);
-        }
-    }
-
 
     private enum WeatherStationState {
         TIME,
         TEMPERATURE,
-        PRESSURE;
+        PRESSURE,
+        CLOSED
     }
 
     private class UpdateTimeRunnable implements Runnable {
         @Override
         public void run() {
-            if (alphanumericDisplay != null && state == WeatherStationState.TIME) {
+            if (currentState == WeatherStationState.TIME) {
                 DateTime lt = new DateTime();
 
                 int hours = lt.getHourOfDay() + 2;
@@ -224,7 +279,7 @@ public class WeatherStation {
                     Log.e(TAG, "Error while displaying hour on alphanumeric display", e);
                 }
             }
-            updateTimeHandler.postDelayed(this, TimeUnit.MILLISECONDS.toMillis(20));
+            updateTimeHandler.postDelayed(this, DEFAULT_REFRESH_RATE_MS);
         }
     }
 
@@ -236,11 +291,11 @@ public class WeatherStation {
                 Log.d(TAG, "on Time button event");
 
                 try {
-                    redLed.setValue(true);
-                    greenLed.setValue(false);
-                    blueLed.setValue(false);
+                    timeRedLed.setValue(true);
+                    temperatureGreenLed.setValue(false);
+                    pressureBlueLed.setValue(false);
 
-                    state = WeatherStationState.TIME;
+                    currentState = WeatherStationState.TIME;
                 } catch (IOException e) {
                     Log.e(TAG, "Error while turning on red LED (Time)");
                 }
@@ -256,11 +311,11 @@ public class WeatherStation {
                 Log.d(TAG, "on Temperature button event");
 
                 try {
-                    redLed.setValue(false);
-                    greenLed.setValue(true);
-                    blueLed.setValue(false);
+                    timeRedLed.setValue(false);
+                    temperatureGreenLed.setValue(true);
+                    pressureBlueLed.setValue(false);
 
-                    state = WeatherStationState.TEMPERATURE;
+                    currentState = WeatherStationState.TEMPERATURE;
                 } catch (IOException e) {
                     Log.e(TAG, "Error while turning on green LED (Temperature)");
                 }
@@ -276,11 +331,11 @@ public class WeatherStation {
                 Log.d(TAG, "on Pressure button event");
 
                 try {
-                    redLed.setValue(false);
-                    greenLed.setValue(false);
-                    blueLed.setValue(true);
+                    timeRedLed.setValue(false);
+                    temperatureGreenLed.setValue(false);
+                    pressureBlueLed.setValue(true);
 
-                    state = WeatherStationState.PRESSURE;
+                    currentState = WeatherStationState.PRESSURE;
                 } catch (IOException e) {
                     Log.e(TAG, "Error while turning on blue LED (Pressure)");
                 }
@@ -304,7 +359,7 @@ public class WeatherStation {
 
         @Override
         public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
+            //Do nothing because not interested in it
         }
     }
 }
