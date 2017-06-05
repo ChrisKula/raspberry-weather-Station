@@ -262,6 +262,7 @@ public class WeatherStation {
             if (currentState == WeatherStationState.TIME) {
                 DateTime lt = new DateTime();
 
+                //By default, rPi's intern time is set for GMT, offset it by 2 hours to get CET
                 int hours = lt.getHourOfDay() + 2;
                 hours = hours >= 24 ? hours - 24 : hours;
 
