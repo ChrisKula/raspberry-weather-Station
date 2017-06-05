@@ -1,4 +1,4 @@
-package com.christitiankula.raspberryweatherstation;
+package com.christiankula.raspberryweatherstation;
 
 import org.junit.Test;
 

@@ -1,4 +1,6 @@
-package com.christitiankula.raspberryweatherstation;
+package com.christiankula.raspberryweatherstation;
+
+import static junit.framework.Assert.assertEquals;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
