@@ -192,7 +192,7 @@ public class WeatherStation {
         Log.d(TAG, "WeatherStation closed");
     }
 
-    public void clearAllPeripherals() throws IOException {
+    private void clearAllPeripherals() throws IOException {
         alphanumericDisplay.clear();
 
         ledStrip.write(LedStripUtils.getTurnedOffColors());
